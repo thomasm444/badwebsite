@@ -207,7 +207,7 @@ function nudgeRunnerButton() {
   runnerHoverCount += 1;
 
   if (runnerMovesLeft <= 0) {
-    gateMessage.textContent = `Hover count: ${Math.min(runnerHoverCount, requiredRunnerHovers)}/${requiredRunnerHovers}. You can click now.`;
+    gateMessage.textContent = "Button unlocked. Click it.";
     return;
   }
 
@@ -225,9 +225,9 @@ function nudgeRunnerButton() {
   runnerMovesLeft -= 1;
 
   if (runnerHoverCount < requiredRunnerHovers) {
-    gateMessage.textContent = `Hover count: ${runnerHoverCount}/${requiredRunnerHovers}. Keep chasing.`;
+    gateMessage.textContent = "Keep trying.";
   } else {
-    gateMessage.textContent = `Hover count: ${requiredRunnerHovers}/${requiredRunnerHovers}. Click is unlocked.`;
+    gateMessage.textContent = "Button unlocked. Click it.";
   }
 }
 
@@ -244,7 +244,7 @@ trapButtons.forEach((btn) => {
 });
 
 maybeBtn.addEventListener("click", () => {
-  gateMessage.textContent = "Correct-ish. Proceed to chaos mode and hover 15 times.";
+  gateMessage.textContent = "Correct-ish. Proceed to chaos mode.";
   showStep(3);
   runnerMovesLeft = 15;
   runnerHoverCount = 0;
@@ -254,7 +254,7 @@ runnerBtn.addEventListener("mouseenter", nudgeRunnerButton);
 runnerBtn.addEventListener("mousemove", nudgeRunnerButton);
 runnerBtn.addEventListener("click", () => {
   if (runnerHoverCount < requiredRunnerHovers) {
-    gateMessage.textContent = `Nope. Hover ${requiredRunnerHovers - runnerHoverCount} more time(s) first.`;
+    gateMessage.textContent = "Nope. Not yet.";
     return;
   }
 
