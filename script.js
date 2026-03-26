@@ -39,9 +39,10 @@ const expressionChallenges = [
     label: "Smile",
     emoji: "🙂",
     comments: [
-      "That smile looks like your face is asking for a refund.",
-      "You smile like you lost a bet and this was the punishment.",
-      "I've seen warning labels with more joy than that expression."
+      "That's the saddest smile I've ever processed",
+      "My error messages are more cheerful than that",
+      "Did it hurt? Smiling clearly doesn't come natural to you",
+      "You smile like you're filling out tax forms"
     ]
   },
   {
@@ -49,9 +50,10 @@ const expressionChallenges = [
     label: "Neutral",
     emoji: "😐",
     comments: [
-      "Your neutral face looks like the personality slider got stuck at zero.",
-      "You look like a paused character waiting for better graphics.",
-      "If boredom had a passport photo, this would be it."
+      "Congratulations, you look like a default avatar",
+      "Absolutely nothing is happening on your face. Impressive.",
+      "You have the energy of an unread notification",
+      "A blank wall has more personality than this"
     ]
   },
   {
@@ -59,19 +61,21 @@ const expressionChallenges = [
     label: "Confused",
     emoji: "😕",
     comments: [
-      "You look like your brain opened 30 tabs and crashed.",
-      "That confused face is doing circles without ever finding a thought.",
-      "Even the camera looks embarrassed trying to process that expression."
+      "Your face buffered and never loaded",
+      "Even the camera doesn't know what it's looking at",
+      "You look confused AND concerning. Impressive multitasking",
+      "This is your thinking face? Yikes."
     ]
   },
   {
     key: "sad-face",
-    label: "Sad Face",
+    label: "Sad",
     emoji: "😢",
     comments: [
-      "That sad face looks like even your tears gave up halfway.",
-      "You look like a rejected audition for a dramatic ad.",
-      "If sympathy were currency, this expression would still be broke."
+      "The website feels nothing. Unlike you apparently.",
+      "Bold of you to cry in front of a website",
+      "Error 404: Sympathy not found",
+      "Even your sadness is mid"
     ]
   }
 ];
