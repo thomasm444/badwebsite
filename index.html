@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Face Roast Gatekeeper</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <section class="panel" id="gatePanel">
+      <h1>Face Roast Gatekeeper</h1>
+      <p class="subtitle">You wanted camera access? Earn it.</p>
+
+      <div class="gate-step" data-step="1">
+        <p>Step 1: Click the obvious button.</p>
+        <button id="obviousBtn" class="btn">Totally Obvious</button>
+      </div>
+
+      <div class="gate-step hidden" data-step="2">
+        <p>Step 2: Choose the correct wrong answer.</p>
+        <div class="row">
+          <button class="btn trap" data-next="1">Yes</button>
+          <button class="btn trap" data-next="1">No</button>
+          <button class="btn" id="maybeBtn">Maybe?</button>
+        </div>
+      </div>
+
+      <div class="gate-step hidden" data-step="3">
+        <p>Step 3: Catch the button. It only dodges a little now.</p>
+        <div class="chaos-zone" id="chaosZone">
+          <button id="runnerBtn" class="btn danger">Open Camera (Probably)</button>
+        </div>
+      </div>
+
+      <div class="gate-step hidden" data-step="4">
+        <p>Step 4: Final legal nonsense.</p>
+        <label class="tiny-check">
+          <input type="checkbox" id="consentCheck" />
+          I understand these roasts are just jokes and I will not cry (too much).
+        </label>
+        <button id="finalCameraBtn" class="btn" disabled>Fine, launch camera</button>
+      </div>
+
+      <p id="gateMessage" class="gate-message"></p>
+    </section>
+
+    <section class="panel hidden" id="cameraPanel">
+      <h2>Make a face. Receive a roast.</h2>
+      <p class="subtitle">This is unnecessarily judgmental AI-adjacent nonsense.</p>
+      <div class="camera-layout">
+        <div class="camera-wrap">
+          <video id="video" autoplay playsinline muted></video>
+          <canvas id="canvas" width="640" height="480"></canvas>
+        </div>
+
+        <aside class="reaction-side">
+          <p id="promptExpression" class="prompt-expression">Make this face: 🙂 Smile</p>
+          <p id="modelStatus" class="model-status">Loading expression detector...</p>
+          <p id="roastOutput" class="roast-output">Waiting for your first regrettable expression...</p>
+        </aside>
+      </div>
+
+      <div class="controls row">
+        <button id="roastBtn" class="btn danger">Analyze My Face</button>
+        <button id="retryBtn" class="btn">Make Another Face</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/tracking-min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/data/face-min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
