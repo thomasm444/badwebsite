@@ -13,7 +13,6 @@ const chaosZone = document.getElementById("chaosZone");
 const consentCheck = document.getElementById("consentCheck");
 const finalCameraBtn = document.getElementById("finalCameraBtn");
 
-const roastBtn = document.getElementById("roastBtn");
 const retryBtn = document.getElementById("retryBtn");
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
@@ -25,8 +24,14 @@ let stream = null;
 let faceLandmarker = null;
 let expressionModelReady = false;
 let expressionModelLoading = false;
-let runnerMovesLeft = 2;
+let runnerMovesLeft = 15;
+let runnerHoverCount = 0;
+const requiredRunnerHovers = 15;
 let currentChallenge = null;
+let autoAnalyzeTimer = null;
+let isAnalyzing = false;
+let challengeResolved = false;
+let challengePickCount = 0;
 
 const expressionChallenges = [
   {
@@ -34,19 +39,9 @@ const expressionChallenges = [
     label: "Smile",
     emoji: "🙂",
     comments: [
-      "That's the saddest smile I've ever processed",
-      "My error messages are more cheerful than that",
-      "Did it hurt? Smiling clearly doesn't come natural to you"
-    ]
-  },
-  {
-    key: "angry",
-    label: "Angry",
-    emoji: "😠",
-    comments: [
-      "That's your angry face? My loading screen is more threatening",
-      "You look mildly inconvenienced at best",
-      "Even your anger is mid"
+      "That smile looks like your face is asking for a refund.",
+      "You smile like you lost a bet and this was the punishment.",
+      "I've seen warning labels with more joy than that expression."
     ]
   },
   {
@@ -54,9 +49,9 @@ const expressionChallenges = [
     label: "Neutral",
     emoji: "😐",
     comments: [
-      "Congratulations, you look like a default avatar",
-      "Absolutely nothing is happening on your face. Impressive.",
-      "You have the energy of an unread notification"
+      "Your neutral face looks like the personality slider got stuck at zero.",
+      "You look like a paused character waiting for better graphics.",
+      "If boredom had a passport photo, this would be it."
     ]
   },
   {
@@ -64,29 +59,19 @@ const expressionChallenges = [
     label: "Confused",
     emoji: "😕",
     comments: [
-      "You look confused AND ugly. Impressive multitasking",
-      "Your face buffered and never loaded",
-      "Even the camera doesn't know what it's looking at"
+      "You look like your brain opened 30 tabs and crashed.",
+      "That confused face is doing circles without ever finding a thought.",
+      "Even the camera looks embarrassed trying to process that expression."
     ]
   },
   {
-    key: "crying",
-    label: "Crying",
+    key: "sad-face",
+    label: "Sad Face",
     emoji: "😢",
     comments: [
-      "The website feels nothing. Unlike you apparently.",
-      "Bold of you to cry in front of a website",
-      "Error 404: Sympathy not found"
-    ]
-  },
-  {
-    key: "extremely-happy",
-    label: "Extremely Happy",
-    emoji: "🤩",
-    comments: [
-      "Calm down.",
-      "You're celebrating like you passed a CAPTCHA",
-      "That joy level is suspicious for this website"
+      "That sad face looks like even your tears gave up halfway.",
+      "You look like a rejected audition for a dramatic ad.",
+      "If sympathy were currency, this expression would still be broke."
     ]
   }
 ];
@@ -95,9 +80,45 @@ function randomFrom(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
+function speakRoast(text) {
+  if (!("speechSynthesis" in window)) {
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 1;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+  window.speechSynthesis.speak(utterance);
+}
+
 function pickChallenge() {
-  currentChallenge = randomFrom(expressionChallenges);
+  const easyChallenges = expressionChallenges.filter(
+    (item) => item.key === "smile" || item.key === "neutral"
+  );
+
+  if (challengePickCount < 4 && easyChallenges.length) {
+    currentChallenge = randomFrom(easyChallenges);
+  } else {
+    currentChallenge = randomFrom(expressionChallenges);
+  }
+
+  challengePickCount += 1;
+  challengeResolved = false;
   promptExpression.textContent = `Make this face: ${currentChallenge.emoji} ${currentChallenge.label}`;
+}
+
+function startAutoAnalyze() {
+  if (autoAnalyzeTimer) {
+    clearInterval(autoAnalyzeTimer);
+  }
+
+  autoAnalyzeTimer = setInterval(() => {
+    roastCurrentFrame({ auto: true, silentMismatch: true });
+  }, 1700);
+
+  roastCurrentFrame({ auto: true, silentMismatch: true });
 }
 
 async function ensureExpressionModel() {
@@ -146,33 +167,21 @@ function getBlendshapeScores(result) {
 function inferExpression(scores) {
   const smile = Math.max(scores.mouthSmileLeft || 0, scores.mouthSmileRight || 0);
   const frown = Math.max(scores.mouthFrownLeft || 0, scores.mouthFrownRight || 0);
-  const browDown = ((scores.browDownLeft || 0) + (scores.browDownRight || 0)) / 2;
   const browInnerUp = scores.browInnerUp || 0;
   const eyeWide = ((scores.eyeWideLeft || 0) + (scores.eyeWideRight || 0)) / 2;
   const eyeSquint = ((scores.eyeSquintLeft || 0) + (scores.eyeSquintRight || 0)) / 2;
-  const jawOpen = scores.jawOpen || 0;
-  const mouthPress = ((scores.mouthPressLeft || 0) + (scores.mouthPressRight || 0)) / 2;
   const mouthPucker = scores.mouthPucker || 0;
   const mouthShrugUpper = scores.mouthShrugUpper || 0;
 
-  const angryScore = browDown + mouthPress;
-  const cryingScore = frown + browInnerUp + eyeSquint;
+  const sadFaceScore = frown + browInnerUp + eyeSquint;
   const confusedScore = browInnerUp + eyeWide + mouthPucker + mouthShrugUpper;
-
-  if (smile > 0.55 && jawOpen > 0.25) {
-    return expressionChallenges.find((item) => item.key === "extremely-happy");
-  }
 
   if (smile > 0.35) {
     return expressionChallenges.find((item) => item.key === "smile");
   }
 
-  if (angryScore > 0.62) {
-    return expressionChallenges.find((item) => item.key === "angry");
-  }
-
-  if (cryingScore > 0.75) {
-    return expressionChallenges.find((item) => item.key === "crying");
+  if (sadFaceScore > 0.75) {
+    return expressionChallenges.find((item) => item.key === "sad-face");
   }
 
   if (confusedScore > 0.95) {
@@ -191,7 +200,10 @@ function showStep(stepNumber) {
 }
 
 function nudgeRunnerButton() {
+  runnerHoverCount += 1;
+
   if (runnerMovesLeft <= 0) {
+    gateMessage.textContent = `Hover count: ${Math.min(runnerHoverCount, requiredRunnerHovers)}/${requiredRunnerHovers}. You can click now.`;
     return;
   }
 
@@ -207,6 +219,12 @@ function nudgeRunnerButton() {
   runnerBtn.style.left = `${x}px`;
   runnerBtn.style.top = `${y}px`;
   runnerMovesLeft -= 1;
+
+  if (runnerHoverCount < requiredRunnerHovers) {
+    gateMessage.textContent = `Hover count: ${runnerHoverCount}/${requiredRunnerHovers}. Keep chasing.`;
+  } else {
+    gateMessage.textContent = `Hover count: ${requiredRunnerHovers}/${requiredRunnerHovers}. Click is unlocked.`;
+  }
 }
 
 obviousBtn.addEventListener("click", () => {
@@ -222,13 +240,20 @@ trapButtons.forEach((btn) => {
 });
 
 maybeBtn.addEventListener("click", () => {
-  gateMessage.textContent = "Correct-ish. Proceed to mild chaos mode.";
+  gateMessage.textContent = "Correct-ish. Proceed to chaos mode and hover 15 times.";
   showStep(3);
-  runnerMovesLeft = 2;
+  runnerMovesLeft = 15;
+  runnerHoverCount = 0;
 });
 
 runnerBtn.addEventListener("mouseenter", nudgeRunnerButton);
+runnerBtn.addEventListener("mousemove", nudgeRunnerButton);
 runnerBtn.addEventListener("click", () => {
+  if (runnerHoverCount < requiredRunnerHovers) {
+    gateMessage.textContent = `Nope. Hover ${requiredRunnerHovers - runnerHoverCount} more time(s) first.`;
+    return;
+  }
+
   gateMessage.textContent = "Impressive. You clicked the greased button.";
   showStep(4);
 });
@@ -248,6 +273,7 @@ finalCameraBtn.addEventListener("click", async () => {
     cameraPanel.classList.remove("hidden");
     await ensureExpressionModel();
     pickChallenge();
+    startAutoAnalyze();
   } catch (err) {
     gateMessage.textContent =
       "Camera blocked. If you denied permission, refresh and suffer through the gate again.";
@@ -255,26 +281,44 @@ finalCameraBtn.addEventListener("click", async () => {
   }
 });
 
-async function roastCurrentFrame() {
+async function roastCurrentFrame(options = {}) {
+  const { auto = false, silentMismatch = false } = options;
+
+  if (isAnalyzing) {
+    return;
+  }
+
+  if (auto && challengeResolved) {
+    return;
+  }
+
   if (!stream || video.readyState < 2) {
-    roastOutput.textContent = "Camera is not ready. Hold your dramatic face for a second.";
+    if (!auto) {
+      roastOutput.textContent = "Camera is not ready. Hold your dramatic face for a second.";
+    }
     return;
   }
 
-  canvas.width = video.videoWidth || 640;
-  canvas.height = video.videoHeight || 480;
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  if (!expressionModelReady || !faceLandmarker) {
-    roastOutput.textContent = "Expression detector is still loading. Try again in a second.";
-    return;
-  }
+  isAnalyzing = true;
 
   try {
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    if (!expressionModelReady || !faceLandmarker) {
+      if (!auto) {
+        roastOutput.textContent = "Expression detector is still loading. Try again in a second.";
+      }
+      return;
+    }
+
     const result = faceLandmarker.detect(canvas);
 
     if (!result?.faceBlendshapes?.length) {
-      roastOutput.textContent = "I asked for a face and got absolutely nothing. Try again.";
+      if (!auto) {
+        roastOutput.textContent = "I asked for a face and got absolutely nothing. Try again.";
+      }
       return;
     }
 
@@ -285,18 +329,26 @@ async function roastCurrentFrame() {
     }
 
     if (detectedExpression.key !== currentChallenge.key) {
-      roastOutput.textContent = `Detected: ${detectedExpression.emoji} ${detectedExpression.label}. Requested: ${currentChallenge.emoji} ${currentChallenge.label}. Try again.`;
+      if (!silentMismatch) {
+        roastOutput.textContent = `Detected: ${detectedExpression.emoji} ${detectedExpression.label}. Requested: ${currentChallenge.emoji} ${currentChallenge.label}. Try again.`;
+      }
       return;
     }
 
-    roastOutput.textContent = randomFrom(currentChallenge.comments);
+    const chosenRoast = randomFrom(currentChallenge.comments);
+    roastOutput.textContent = chosenRoast;
+    speakRoast(chosenRoast);
+    challengeResolved = true;
   } catch (err) {
-    roastOutput.textContent = "Your face confused the detector. Try one more time.";
+    if (!auto) {
+      roastOutput.textContent = "Your face confused the detector. Try one more time.";
+    }
     console.error(err);
+  } finally {
+    isAnalyzing = false;
   }
 }
 
-roastBtn.addEventListener("click", roastCurrentFrame);
 retryBtn.addEventListener("click", () => {
   pickChallenge();
   roastOutput.textContent = "New round. Match the requested emoji expression.";
